@@ -103,12 +103,21 @@
         </div>
     </div>
 
+    <!-- Messenger Floating Button -->
+    <a href="https://m.me/fashionbazar11" target="_blank" class="fixed bottom-5 right-5 bg-blue-600 text-white p-3.5 rounded-full shadow-lg z-40 flex items-center justify-center hover:bg-blue-700 transition">
+        <span class="text-xl">💬</span>
+    </a>
+
     <!-- Footer -->
     <footer class="bg-white border-t text-gray-500 text-center py-4 text-xs mt-10">
         <p>&copy; ২০২৬ Fashion Bazar | সর্বস্বত্ব সংরক্ষিত</p>
     </footer>
 
     <script>
+        // Telegram Bot Credentials
+        const TG_BOT_TOKEN = "9199422756:AAEcU0-0hYy1f0SahqjojA6J-c1tznY-_F0";
+        const TG_CHAT_ID = "7233461130";
+
         // Default Products
         const defaultProducts = [
             { id: 1, name: 'এক্সক্লুসিভ প্রিমিয়াম থ্রি-পিস', price: 1450, img: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=400&auto=format&fit=crop&q=60' },
@@ -116,7 +125,7 @@
         ];
 
         let products = defaultProducts;
-        let savedData = localStorage.getItem('fb_final_products');
+        let savedData = localStorage.getItem('fb_final_products_tg');
         if (savedData) {
             try {
                 products = JSON.parse(savedData);
@@ -126,7 +135,7 @@
         }
 
         let cart = [];
-        let orders = JSON.parse(localStorage.getItem('fb_final_orders')) || [];
+        let orders = JSON.parse(localStorage.getItem('fb_final_orders_tg')) || [];
 
         function renderProducts() {
             let grid = document.getElementById('product-grid');
@@ -210,12 +219,40 @@
 
             let orderDetails = { name, phone, address, items: [...cart], date: new Date().toLocaleString() };
             orders.push(orderDetails);
-            localStorage.setItem('fb_final_orders', JSON.stringify(orders));
+            localStorage.setItem('fb_final_orders_tg', JSON.stringify(orders));
+
+            // Send to Telegram Bot
+            sendTelegramNotification(orderDetails);
 
             alert('ধন্যবাদ ' + name + '! আপনার অর্ডারটি সফলভাবে কনফার্ম হয়েছে।');
             cart = [];
             document.getElementById('cart-count').innerText = 0;
             closeCartModal();
+        }
+
+        function sendTelegramNotification(order) {
+            let itemsText = order.items.map(it => `• ${it.name} - ৳${it.price}`).join('\n');
+            let totalAmount = order.items.reduce((sum, it) => sum + it.price, 0);
+
+            let message = `🛒 *নতুন অর্ডার এসেছে! - Fashion Bazar*\n\n` +
+                          `👤 *গ্রাহক:* ${order.name}\n` +
+                          `📞 *ফোন:* ${order.phone}\n` +
+                          `📍 *ঠিকানা:* ${order.address}\n\n` +
+                          `📦 *পণ্যের বিবরণ:*\n${itemsText}\n\n` +
+                          `💰 *মোট মূল্য:* ৳${totalAmount}\n` +
+                          `⏰ *সময়:* ${order.date}`;
+
+            let url = `https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`;
+            
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: TG_CHAT_ID,
+                    text: message,
+                    parse_mode: 'Markdown'
+                })
+            }).catch(err => console.log('Telegram Error:', err));
         }
 
         function openAdminModal() {
@@ -242,7 +279,7 @@
             }
 
             products.push({ id: Date.now(), name, price, img });
-            localStorage.setItem('fb_final_products', JSON.stringify(products));
+            localStorage.setItem('fb_final_products_tg', JSON.stringify(products));
             renderProducts();
             
             document.getElementById('new-p-name').value = '';
